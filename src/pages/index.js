@@ -8,6 +8,7 @@ import Header from "../components/Header";
 import Hero from "../components/Hero";
 import SEO from "../components/SEO";
 import Layout from "../components/Layout";
+import Footer from "../components/Footer";
 
 export const posts = [
   {
@@ -90,11 +91,12 @@ export default function Home() {
   return (
     <Layout>
       <SEO title={pageTitle} />
-      <div className="overflow-x-hidden">
+      <div className="overflow-x-hidden grow">
         <Header />
         <Hero />
 
-        <div className="mb-28">
+        <div className="mb-48">
+          <h2 className="text-4xl font-extrabold">Artikel anda kosong 😱!</h2>
           <div
             ref={myRef}
             className="wrapper translate-x-[0] opacity-1 duration-500 mt-28 grid font-poppins grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6 p-2 lg:p-6"
@@ -191,6 +193,7 @@ export default function Home() {
         </div>
       </div>
       {/* bottom section */}
+      <Footer/>
     </Layout>
   );
 }

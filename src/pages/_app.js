@@ -5,6 +5,7 @@ import { configStore } from '../redux/configureStore';
 import { Provider } from 'react-redux';
 import 'react-toastify/dist/ReactToastify.css';
 import "../styles/globals.css";
+import '../styles/tinymce-content.css';
 
 axios.defaults.baseURL = process.env.NEXT_PUBLIC_SERVER_ENDPOINT;
 axios.defaults.withCredentials = true;

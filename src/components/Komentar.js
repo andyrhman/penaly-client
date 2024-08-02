@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Spinner as ButtonSpinner } from "./Spinner";
+import ButtonSpinner from "./ButtonSpinner";
 import Image from "next/image";
 import FormatDate from "../services/format-time";
 import { useRouter } from 'next/router';
 import { toast, Slide } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const Komentar = ({ id }) => {
+export const Komentar = ({ id, slug }) => {
     const [komentar, setKomentar] = useState('');
     const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -29,9 +29,7 @@ const Komentar = ({ id }) => {
                         });
                         setTotalCount(count);
                     } catch (error) {
-                        if (error.response && [401, 403].includes(error.response.status)) {
-                            router.push('/');
-                        }
+                        null
                     }
                 }
             )();
@@ -66,6 +64,9 @@ const Komentar = ({ id }) => {
             }
         } catch (error) {
             console.error(error.response);
+            if (error.response && [401].includes(error.response.status)) {
+                router.push(`/post/${slug}`);
+            }
             if (error.response && error.response.data && error.response.data.message) {
                 const errorMessage = error.response.data.message;
                 setError(errorMessage);
@@ -94,6 +95,9 @@ const Komentar = ({ id }) => {
                 return comment;
             }));
         } catch (error) {
+            if (error.response && [401].includes(error.response.status)) {
+                router.push(`/post/${slug}`);
+            }
             console.error('Error toggling like:', error);
         }
     };
@@ -130,6 +134,9 @@ const Komentar = ({ id }) => {
             window.location.reload();
         } catch (error) {
             console.error('Error submitting reply:', error);
+            if (error.response && [401].includes(error.response.status)) {
+                router.push(`/post/${slug}`);
+            }
             if (error.response && error.response.data && error.response.data.message) {
                 setError(error.response.data.message);
             }
@@ -162,6 +169,9 @@ const Komentar = ({ id }) => {
 
             setComments(updatedComments);
         } catch (error) {
+            if (error.response && [401].includes(error.response.status)) {
+                router.push(`/post/${slug}`);
+            }
             console.error(error.response);
         }
     };
@@ -179,9 +189,6 @@ const Komentar = ({ id }) => {
     return (
         <section className="bg-white py-8 lg:py-16 antialiased">
             <div className="max-w-2xl mx-auto px-4">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-lg lg:text-2xl font-bold text-gray-900">Diskusi ({totalCount})</h2>
-                </div>
                 <form className="mb-6">
                     <div className="py-2 px-4 mb-4 bg-white rounded-lg rounded-t-lg border border-gray-200">
                         <label htmlFor="comment" className="sr-only">Komentar Anda</label>
@@ -323,4 +330,4 @@ const Komentar = ({ id }) => {
     )
 }
 
-export default Komentar;
+// export default Komentar;

@@ -5,6 +5,7 @@ import { VscClose } from "react-icons/vsc";
 import { BsChevronLeft } from "react-icons/bs";
 import { IoMailOutline } from "react-icons/io5";
 import { connect } from "react-redux";
+import { useRouter } from "next/router";
 import Alert from "./Alert";
 import Spinner from "./Spinner";
 import { Slide, toast } from 'react-toastify';
@@ -12,6 +13,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import Image from "next/image";
 
 export function Header({ user }) {
+  const router = useRouter();
+
   const [signup, setsignup] = useState(false);
   const [error, setError] = useState('');
   const [sign, setsign] = useState(0);
@@ -147,17 +150,13 @@ export function Header({ user }) {
     const isEmail = emailRegex.test(usernameOrEmail);
 
     try {
-      const { data } = await axios.post('login', {
+      await axios.post('login', {
         email: isEmail ? usernameOrEmail : undefined,
         username: isEmail ? undefined : usernameOrEmail,
         password: passwordLogin,
         rememberMe
       });
-      if (data) {
-        router.push('/');
-      } else {
-        setError('An error occurred during sign-in');
-      }
+      window.location.reload();
 
     } catch (error) {
       console.error(error.response);
@@ -204,7 +203,7 @@ export function Header({ user }) {
 
   const logout = async () => {
     await axios.post('logout', {});
-    router.push('/login');
+    window.location.reload();
   }
   return (
     <div className="bg-white fixed inset-x-0 top-0 shadow-lg z-10">
@@ -267,7 +266,7 @@ export function Header({ user }) {
                   }`}
               >
                 <Link
-                  href={'/articles/create'}
+                  href={'/articles'}
                   className="mb-2 flex items-center gap-2 text-gray-500 text-sm font-medium duration-300 ease-in-out hover:text-primary lg:text-base">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bi bi-journal-richtext" viewBox="0 0 16 16">
                     <path d="M7.5 3.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m-.861 1.542 1.33.886 1.854-1.855a.25.25 0 0 1 .289-.047L11 4.75V7a.5.5 0 0 1-.5.5h-5A.5.5 0 0 1 5 7v-.5s1.54-1.274 1.639-1.208M5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5" />
@@ -750,7 +749,7 @@ export function Header({ user }) {
                             required
                             max={20}
                           />
-                          <div class="ml-3 text-sm space-x-2">
+                          <div className="ml-3 text-sm space-x-2">
                             <input
                               id="remember"
                               aria-describedby="remember"
@@ -760,7 +759,7 @@ export function Header({ user }) {
 
                             />
 
-                            <label for="remember" className="text-sm font-medium text-primary-400 hover:underline dark:text-primary-400">Ingat Saya</label>
+                            <label htmlFor="remember" className="text-sm font-medium text-primary-400 hover:underline dark:text-primary-400">Ingat Saya</label>
                           </div>
 
                           {loading ? <Spinner /> : <input

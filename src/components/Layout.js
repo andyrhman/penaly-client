@@ -5,7 +5,6 @@ import { connect } from "react-redux";
 import { setUser } from "../redux/actions/setUserAction";
 
 const Layout = (props) => {
-  const { setUser } = props;
   const router = useRouter();
 
   useEffect(() => {
@@ -23,12 +22,10 @@ const Layout = (props) => {
           role: data.role,
         });
       } catch (error) {
-        if (error.response && [401, 403].includes(error.response.status)) {
-          router.push('/');
-        }
+        null
       } 
     })();
-  }, [setUser, router]);
+  }, []);
   return (
     <div>
       {props.children}

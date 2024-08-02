@@ -1,18 +1,15 @@
-import { GetServerSideProps, GetStaticPaths, GetStaticProps } from "next";
 import { useInView } from "react-intersection-observer";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { BiUpArrow } from "react-icons/bi";
-import { BiErrorAlt } from "react-icons/bi";
 import { MdOutlinePrivacyTip } from "react-icons/md";
 import { IoMailOutline } from "react-icons/io5";
 import { Tooltip } from "react-tippy";
 import { FiSearch } from "react-icons/fi";
-import { RiMailAddLine } from "react-icons/ri";
 import { VscClose } from "react-icons/vsc";
 import { BsChevronLeft } from "react-icons/bs";
-import { FcGoogle } from "react-icons/fc";
 import { connect } from "react-redux";
+import { Komentar } from '../../components/Komentar'
 import axios from "axios";
 import Header from "../../components/Header";
 import Image from "next/image";
@@ -20,7 +17,8 @@ import SyntaxHighlighter from "react-syntax-highlighter";
 import Link from "next/link";
 import FormatDate from "../../services/format-time"
 import parse from 'html-react-parser';
-import Komentar from '../../components/Komentar'
+import Layout from "../../components/Layout";
+import SEO from "../../components/SEO";
 import * as sanitizeHtml from 'sanitize-html';
 import "react-tippy/dist/tippy.css";
 
@@ -124,8 +122,8 @@ const Post = ({ user }) => {
       const { data: postNew } = await axios.get(`articles/published/new`);
       setPostsNew(postNew);
     } catch (error) {
-      if (error.response && [401, 403].includes(error.response.status)) {
-        router.push('/login');
+      if (error.response && [403].includes(error.response.status)) {
+        router.push('/');
       }
     }
   };
@@ -152,7 +150,6 @@ const Post = ({ user }) => {
     }
   };
 
-  const [sentpopup, setsentpopup] = useState(false);
   const [commentside, setcommentside] = useState(false);
 
   // hide on top at specific height
@@ -166,56 +163,13 @@ const Post = ({ user }) => {
     };
   });
 
-  // * ######################################################
   const [searchTerm, setSearchTerm] = useState("");
-  const [submited, setsubmited] = useState(false);
-  const [sign, setsign] = useState(0);
-  const [issending, setissending] = useState(false);
-  const [usersetting, setusersetting] = useState(false);
   const [signup, setsignup] = useState(false);
-
-  const logout = null;
-  const submit = null;
-
+  const [sign, setsign] = useState(0);
 
   // hide on top at specific height
 
   const [up, setup] = useState(false);
-  const [popup, setPopup] = React.useState(false);
-
-  function InpClicked(e) {
-    const { name, value } = e.target;
-    setemail((prevdata) => {
-      return { ...prevdata, [name]: value };
-    });
-  }
-  const [emaila, setemail] = useState({ email: "" });
-
-  /* response / side popup */
-  const [response, setresponse] = useState(false);
-
-  /* response / side popup */
-
-  function InpClicked1(e) {
-    const { name, value } = e.target;
-
-    setCommentfield((prevdata) => {
-      return { ...prevdata, [name]: value };
-    });
-  }
-
-  const [commentfield, setCommentfield] = useState({
-    comment: "",
-  });
-  const [likefield, setlikefield] = useState(0);
-
-  let data = {
-    _id: post && post._id,
-    name: user && user.displayName,
-    email: user && user.email,
-    userImage: user && user.photoURL,
-    comment: commentfield.comment,
-  };
 
   // sanity rich text
   const CodeRenderer = ({ node }) => {
@@ -238,208 +192,510 @@ const Post = ({ user }) => {
 
   const [isopen, setisopen] = React.useState(false);
 
-  const [newsletterpopup, setnewsletterpopup] = useState(false);
-  function ClickedMail() {
-    const usermail = { userEmail: user?.email };
-    if (!user) {
-      setsignup(true);
-    } else if (user) {
-      addDoc(collection(db, "NewsLettersBtn"), usermail)
-        .then(() => {
-          setnewsletterpopup(true);
-        })
-        .catch((error) => {
-          console.log(error.message);
-        });
+  // * Sign up
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [username, setUsername] = useState('');
+
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
+  const [loading, setLoading] = useState(false);
+
+  const [strength, setStrength] = useState(0);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setEmailError(false);
+    setLoading(true);
+    setPasswordError('');
+    setConfirmPasswordError('');
+    setError('');
+
+    if (confirmPassword !== password) {
+      setConfirmPasswordError('Password tidak sama!');
+      return;
+    }
+
+    try {
+      await axios.post('register', {
+        namaLengkap: fullName,
+        email,
+        password,
+        username,
+        password_confirm: confirmPassword
+      });
+      window.location.reload();
+      sessionStorage.setItem('updateSuccess', '1');
+    } catch (error) {
+      console.error(error.response);
+      if (error.response && error.response.data && error.response.data.message) {
+        window.scrollTo(0, 0);
+        const errorMessage = error.response.data.message;
+        setError(errorMessage);
+
+        if (errorMessage.includes('Password')) {
+          setPasswordError(errorMessage);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  function checkPasswordStrength(password) {
+    let strength = 0;
+    if (password.match(/[a-z]/)) strength++; // lower case letter
+    if (password.match(/[A-Z]/)) strength++; // upper case letter
+    if (password.match(/[0-9]/)) strength++; // number
+    if (password.match(/[^a-zA-Z0-9]/)) strength++; // special character
+    if (password.length >= 6) strength++; // length 8 or more
+    return strength;
+  }
+
+  const validatePassword = (value) => {
+    setPassword(value);
+    setPasswordError('');
+    const strength = checkPasswordStrength(value);
+    setStrength(strength);
+
+    if (!value) {
+      setPasswordError('Password harus diisi');
+    } else if (value.length < 6) {
+      setPasswordError('Password harus memiliki 6 huruf maksimal');
+    }
+  };
+  const validateConfirmPassword = (value) => {
+    setConfirmPassword(value);
+    setConfirmPasswordError('');
+
+    if (!value) {
+      setConfirmPasswordError('Konfirmasi Password harus diisi');
+    } else if (value !== password) {
+      setConfirmPasswordError('Password tidak sama');
+    }
+  };
+
+  const strengthBarColor = () => {
+    switch (strength) {
+      case 1: return 'red';
+      case 2: return 'orange';
+      case 3: return 'yellow';
+      case 4: return 'lime';
+      case 5: return 'green';
+      default: return 'gray';
     }
   }
-  const [followed, setfollowed] = useState(false);
 
-  function Clickedfollow() {
-    const usermail = { userEmail: user?.email };
-
-    if (user) {
-      addDoc(collection(db, "Followed"), usermail)
-        .then(() => {
-          setfollowed((prev) => !prev);
-        })
-        .catch((error) => {
-          console.log(error.message);
-        });
-    } else {
-      setsignup(true);
+  const strengthText = () => {
+    switch (strength) {
+      case 1: return 'Terlalu Pendek';
+      case 2: return 'Lemah';
+      case 3: return 'Okay';
+      case 4: return 'Bagus';
+      case 5: return 'Kuat';
+      default: return '';
     }
   }
+
+  // * login
+  const [usernameOrEmail, setUsernameOrEmail] = useState('');
+  const [usernameOrEmailError, setUsernameOrEmailError] = useState(false);
+  const [passwordLogin, setPasswordLogin] = useState('');
+
+  const [rememberMe, setRememberMe] = useState(false);
+
+  const submitLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setUsernameOrEmailError(false);
+    setPasswordError('');
+    setError('');
+
+    const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
+
+    const isEmail = emailRegex.test(usernameOrEmail);
+
+    try {
+      await axios.post('login', {
+        email: isEmail ? usernameOrEmail : undefined,
+        username: isEmail ? undefined : usernameOrEmail,
+        password: passwordLogin,
+        rememberMe
+      });
+      window.location.reload();
+    } catch (error) {
+      console.error(error.response);
+      if (error.response && error.response.data && error.response.data.message) {
+        const errorMessage = error.response.data.message;
+        setError(errorMessage);
+        if (errorMessage.includes('Username or Email')) {
+          setUsernameOrEmailError(errorMessage);
+        }
+        if (errorMessage.includes('Password')) {
+          setPasswordError(errorMessage);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+  const validateLoginPassword = (value) => {
+    setPasswordLogin(value);
+    setPasswordError('');
+
+    if (!value) {
+      setPasswordError('Password harus diisi');
+    }
+  };
+
+  useEffect(() => {
+    const updateSuccess = sessionStorage.getItem('updateSuccess');
+    if (updateSuccess === '1') {
+      toast.success('Akun berhasil terdaftar!', {
+        position: "top-center",
+        autoClose: 2000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        transition: Slide
+      });
+      sessionStorage.removeItem('updateSuccess');
+    }
+  }, []);
+
+  const logout = async () => {
+    await axios.post('logout', {});
+    window.location.reload();
+  }
+
+  const pageTitle = `${sanitizeHtml(title)} | ${process.env.siteTitle}`;
 
   return (
-    <main className="font-poppins grid grid-cols-7 ">
-      {/* First section */}
-      <div className="xl:flex justify-end  h-full hidden relative  ">
-        <div className="fixed justify-between  h-full px-6 py-12  col-span-1 flex flex-col ">
-          <div className="flex cursor-pointer ">
-            <Link passHref href="/">
-              <img
-                className="h-14"
-                src="https://cdn3.iconfinder.com/data/icons/social-media-black-white-2/1151/Medium_logo_-_black-512.png"
-                alt=""
-              />
-            </Link>
-          </div>
-          {/* // * Sidebar right */}
-          <div className="flex flex-col justify-end items-end space-y-8 ">
-            {" "}
-            <Link href="/">
-              <div>
-                <Tooltip
-                  // options
-                  title="Home"
-                  position="right"
-                  trigger="mouseenter"
-                  arrow={true}
-                  delay={300}
-                  hideDelay={0}
-                  distance={20}
-                >
-                  <HomeUnclicked />
-                </Tooltip>
-              </div>
-            </Link>
-            <Tooltip
-              // options
-              title="Notifications"
-              position="right"
-              trigger="mouseenter"
-              arrow={true}
-              delay={300}
-              hideDelay={0}
-              distance={20}
-            >
-              <Notif />{" "}
-            </Tooltip>
-            <Tooltip
-              // options
-              title="Lists"
-              position="right"
-              trigger="mouseenter"
-              arrow={true}
-              delay={300}
-              hideDelay={0}
-              distance={20}
-            >
-              <Readinglist />
-            </Tooltip>
-            <Tooltip
-              // options
-              title="Stories"
-              position="right"
-              trigger="mouseenter"
-              arrow={true}
-              delay={300}
-              hideDelay={0}
-              distance={20}
-            >
-              <Stories />
-            </Tooltip>
-          </div>
-          <div></div>
-        </div>
-      </div>
-
-      <div className="border-gray-200  border-x-[1px] w-full h-full  col-span-7 xl:col-span-4 ">
-        {up && (
-          <div
-            onClick={scrolltotop}
-            className="fixed hidden sm:block animate-bounce duration-500 z-40 hover:bg-green-700 bg-green-600 shadow-xl cursor-pointer rounded-md p-[13px] m-10 bottom-0 right-0"
-          >
-            <BiUpArrow className="w-4 h-4 text-white" />
-          </div>
-        )}
-        {/* // * Header  */}
-        <div className="block xl:hidden">
-          <Header />
-        </div>
-
-        {/* bottom section */}
-        <div className="w-full   z-50 block sm:hidden px-[30px] py-[20px] fixed bg-gray-100 shadow-md bottom-0">
-          <div className="flex justify-between">
-            <Link href="/">
-              <div>
-                {router.pathname === "/" ? <HomePhone /> : <HomePhone />}
-              </div>
-            </Link>
-            {/* <Home /> */}
-            <Link href="/SearchCo">
-              <div>
-                <Search />
-              </div>
-            </Link>
-            <Tooltip
-              // options
-              title="Not working yet"
-              position="bottom"
-              trigger="mouseenter"
-              arrow={true}
-              delay={300}
-              hideDelay={0}
-              distance={20}
-            >
-              <div>
-                <ReadingList />
-              </div>
-            </Tooltip>
-          </div>
-        </div>
-        {/* bottom section */}
-        <div className="wrapper z-0 mt-24 xl:mt-0 flex flex-col justify-center max-w-[800px] px-6">
-          <div className="md:flex space-y-8  md:space-y-0 justify-between  items-center space-x-4 py-10 font-extralight text-sm">
-            <div className="flex ">
-              <div>
+    <Layout>
+      <SEO title={pageTitle} />
+      <main className="font-poppins grid grid-cols-7 ">
+        {/* First section */}
+        <div className="xl:flex justify-end  h-full hidden relative  ">
+          <div className="fixed justify-between  h-full px-6 py-12  col-span-1 flex flex-col ">
+            <div className="flex cursor-pointer ">
+              <Link passHref href="/">
                 <img
-                  className="h-12 w-12 object-cover rounded-full"
-                  src={penulisFoto}
+                  className="h-14"
+                  src="/images/penaly.png"
                   alt=""
                 />
-              </div>
-              <div className="pl-4">
-                <p className="font-medium text-base">
-                  <span className="text-gray-900">{penulis}</span>
-                </p>
-                <div className="flex items-center ">
-                  <p className="text-gray-600">
-                    <FormatDate timestamp={dibuat_pada} />
-                  </p>
-                </div>
-              </div>
+              </Link>
             </div>
-            <div className="flex justify-end items-center space-x-6">
-              <div className="border-[0.5px] sm:hidden border-gray-100 w-full"></div>
+
+            <div className="flex flex-col justify-end items-end space-y-8 ">
+              {" "}
+              <Link href="/">
+                <div>
+                  <Tooltip
+                    // options
+                    title="Home"
+                    position="right"
+                    trigger="mouseenter"
+                    arrow={true}
+                    delay={300}
+                    hideDelay={0}
+                    distance={20}
+                  >
+                    <HomeUnclicked />
+                  </Tooltip>
+                </div>
+              </Link>
               <Tooltip
-                title="Estimasi Waktu"
-                position="top"
+                // options
+                title="Notifications"
+                position="right"
                 trigger="mouseenter"
                 arrow={true}
                 delay={300}
+                hideDelay={0}
                 distance={20}
               >
-                <p className="font-medium text-base">
-                  <span className="text-gray-500">{estimasi_membaca} Membaca</span>
-                </p>
+                <Notif />{" "}
+              </Tooltip>
+              <Tooltip
+                // options
+                title="Lists"
+                position="right"
+                trigger="mouseenter"
+                arrow={true}
+                delay={300}
+                hideDelay={0}
+                distance={20}
+              >
+                <Readinglist />
+              </Tooltip>
+              <Tooltip
+                // options
+                title="Stories"
+                position="right"
+                trigger="mouseenter"
+                arrow={true}
+                delay={300}
+                hideDelay={0}
+                distance={20}
+              >
+                <Stories />
+              </Tooltip>
+            </div>
+            <div></div>
+          </div>
+        </div>
+
+        <div className="border-gray-200  border-x-[1px] w-full h-full  col-span-7 xl:col-span-4 ">
+          {up && (
+            <div
+              onClick={scrolltotop}
+              className="fixed hidden sm:block animate-bounce duration-500 z-40 hover:bg-green-700 bg-green-600 shadow-xl cursor-pointer rounded-md p-[13px] m-10 bottom-0 right-0"
+            >
+              <BiUpArrow className="w-4 h-4 text-white" />
+            </div>
+          )}
+          {/* // * Header  */}
+          <div className="block xl:hidden">
+            <Header />
+          </div>
+
+          {/* bottom section */}
+          <div className="w-full   z-50 block sm:hidden px-[30px] py-[20px] fixed bg-gray-100 shadow-md bottom-0">
+            <div className="flex justify-between">
+              <Link href="/">
+                <div>
+                  {router.pathname === "/" ? <HomePhone /> : <HomePhone />}
+                </div>
+              </Link>
+              {/* <Home /> */}
+              <Link href="/SearchCo">
+                <div>
+                  <Search />
+                </div>
+              </Link>
+              <Tooltip
+                // options
+                title="Not working yet"
+                position="bottom"
+                trigger="mouseenter"
+                arrow={true}
+                delay={300}
+                hideDelay={0}
+                distance={20}
+              >
+                <div>
+                  <ReadingList />
+                </div>
               </Tooltip>
             </div>
           </div>
-          {/* like x Comment fixed */}
+          {/* bottom section */}
+          <div className="wrapper z-0 mt-24 xl:mt-0 flex flex-col justify-center max-w-[800px] px-6">
+            <div className="md:flex space-y-8  md:space-y-0 justify-between  items-center space-x-4 py-10 font-extralight text-sm">
+              <div className="flex ">
+                <div>
+                  <img
+                    className="h-12 w-12 object-cover rounded-full"
+                    src={penulisFoto}
+                    alt=""
+                  />
+                </div>
+                <div className="pl-4">
+                  <p className="font-medium text-base">
+                    <span className="text-gray-900">{penulis}</span>
+                  </p>
+                  <div className="flex items-center ">
+                    <p className="text-gray-600">
+                      <FormatDate timestamp={dibuat_pada} />
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end items-center space-x-6">
+                <div className="border-[0.5px] sm:hidden border-gray-100 w-full"></div>
+                <Tooltip
+                  title="Estimasi Waktu"
+                  position="top"
+                  trigger="mouseenter"
+                  arrow={true}
+                  delay={300}
+                  distance={20}
+                >
+                  <p className="font-medium text-base">
+                    <span className="text-gray-500">{estimasi_membaca} Membaca</span>
+                  </p>
+                </Tooltip>
+              </div>
+            </div>
+            {/* like x Comment fixed */}
 
-          <div
-            className={`${myelemisvisible
-              ? "fixed hidden bottom-20 md:bottom-10 -translate-x-1/2 left-1/2 xl:left-[43%]"
-              : "fixed bottom-20 md:bottom-10 -translate-x-1/2 left-1/2 xl:left-[43%]"
-              }`}
-          >
-            <div className="  bg-white px-6 py-2 rounded-full shadow-xl">
+            <div
+              className={`${myelemisvisible
+                ? "fixed hidden bottom-20 md:bottom-10 -translate-x-1/2 left-1/2 xl:left-[43%]"
+                : "fixed bottom-20 md:bottom-10 -translate-x-1/2 left-1/2 xl:left-[43%]"
+                }`}
+            >
+              <div className="  bg-white px-6 py-2 rounded-full shadow-xl">
+                <div className="flex  space-x-8  items-center">
+                  {" "}
+                  <div className="flex space-x-2 ">
+                    <Tooltip
+                      title="Likes"
+                      position="top"
+                      trigger="mouseenter"
+                      arrow={true}
+                      delay={300}
+                      hideDelay={0}
+                      distance={20}
+                    >
+                      <div className="flex cursor-not-allowed items-center space-x-2 cursor-pointer">
+                        <button onClick={handleLike}>
+                          <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            aria-label="clap"
+                            className={`${isLiked ? 'text-yellow-500' : ''} fill-current`}
+
+                          >
+                            <path
+                              fillRule="evenodd"
+                              clipRule="evenodd"
+                              d="M11.37.83L12 3.28l.63-2.45h-1.26zM13.92 3.95l1.52-2.1-1.18-.4-.34 2.5zM8.59 1.84l1.52 2.11-.34-2.5-1.18.4zM18.52 18.92a4.23 4.23 0 0 1-2.62 1.33l.41-.37c2.39-2.4 2.86-4.95 1.4-7.63l-.91-1.6-.8-1.67c-.25-.56-.19-.98.21-1.29a.7.7 0 0 1 .55-.13c.28.05.54.23.72.5l2.37 4.16c.97 1.62 1.14 4.23-1.33 6.7zm-11-.44l-4.15-4.15a.83.83 0 0 1 1.17-1.17l2.16 2.16a.37.37 0 0 0 .51-.52l-2.15-2.16L3.6 11.2a.83.83 0 0 1 1.17-1.17l3.43 3.44a.36.36 0 0 0 .52 0 .36.36 0 0 0 0-.52L5.29 9.51l-.97-.97a.83.83 0 0 1 0-1.16.84.84 0 0 1 1.17 0l.97.97 3.44 3.43a.36.36 0 0 0 .51 0 .37.37 0 0 0 0-.52L6.98 7.83a.82.82 0 0 1-.18-.9.82.82 0 0 1 .76-.51c.22 0 .43.09.58.24l5.8 5.79a.37.37 0 0 0 .58-.42L13.4 9.67c-.26-.56-.2-.98.2-1.29a.7.7 0 0 1 .55-.13c.28.05.55.23.73.5l2.2 3.86c1.3 2.38.87 4.59-1.29 6.75a4.65 4.65 0 0 1-4.19 1.37 7.73 7.73 0 0 1-4.07-2.25zm3.23-12.5l2.12 2.11c-.41.5-.47 1.17-.13 1.9l.22.46-3.52-3.53a.81.81 0 0 1-.1-.36c0-.23.09-.43.24-.59a.85.85 0 0 1 1.17 0zm7.36 1.7a1.86 1.86 0 0 0-1.23-.84 1.44 1.44 0 0 0-1.12.27c-.3.24-.5.55-.58.89-.25-.25-.57-.4-.91-.47-.28-.04-.56 0-.82.1l-2.18-2.18a1.56 1.56 0 0 0-2.2 0c-.2.2-.33.44-.4.7a1.56 1.56 0 0 0-2.63.75 1.6 1.6 0 0 0-2.23-.04 1.56 1.56 0 0 0 0 2.2c-.24.1-.5.24-.72.45a1.56 1.56 0 0 0 0 2.2l.52.52a1.56 1.56 0 0 0-.75 2.61L7 19a8.46 8.46 0 0 0 4.48 2.45 5.18 5.18 0 0 0 3.36-.5 4.89 4.89 0 0 0 4.2-1.51c2.75-2.77 2.54-5.74 1.43-7.59L18.1 7.68z"
+                            ></path>
+                          </svg>
+                        </button>
+                        <span className="text-sm  text-gray-500">
+                          {likeCount}
+                        </span>
+                      </div>
+                    </Tooltip>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Tooltip
+                      // options
+                      title="Respond"
+                      position="top"
+                      trigger="mouseenter"
+                      arrow={true}
+                      delay={300}
+                      hideDelay={0}
+                      distance={20}
+                    >
+                      <div
+                        onClick={() => setcommentside(true)}
+                        className="flex space-x-2 items-center cursor-pointer"
+                      >
+                        <Comment />
+                        <span className="text-sm text-gray-500">
+                          {totalCount}
+                        </span>
+                      </div>
+                    </Tooltip>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* like x Comment fixed */}
+
+            <article className="">
+              <h1 className="text-[32px] border-b-[1px] font-bold  mb-3 text-black ">
+                {title}
+              </h1>
+              <h2 className="text-[20px]  font-light text-gray-500">
+                {deskripsi_kecil}
+              </h2>
+              {isopen && (
+                <div
+                  onClick={() => setisopen(false)}
+                  className="fixed inset-0 z-40 bg-gray-200/95"
+                ></div>
+              )}
+              <div onClick={() => setisopen((prev) => !prev)}>
+                <img
+                  className={`${isopen
+                    ? "max-h-[600px]  fixed z-50  m-auto inset-x-0 inset-y-0 p-2 bg-white rounded-sm overflow-y-scroll cursor-zoom-out   duration-500 ease-in-out"
+                    : "h-auto  cursor-zoom-in my-8 w-full object-cover   duration-500 ease-in-out"
+                    }`}
+                  src={gambar}
+                  alt="image"
+                />
+              </div>
+            </article>
+            <div className="tinymce-content">
+              {parse(deskripsi_panjang)}
+            </div>
+            {/* side comment */}
+
+            <div className="">
+              {commentside && (
+                <div
+                  onClick={() => setcommentside(false)}
+                  className="fixed cursor-pointer z-40 inset-0 bg-gray-600/20"
+                ></div>
+              )}
+              <div
+                className={`${commentside
+                  ? "bg-white overflow-x-hidden z-[100]  overflow-y-scroll translate-x-[0%] duration-500 drop-shadow-[0_35px_135px_rgba(0,0,0,0.5)] px-6 pt-6 h-full fixed w-[90%] md:w-[60%] lg:w-[45%] xl:w-[25%]  right-0 bottom-0"
+                  : "bg-white  translate-x-[300%] duration-500 drop-shadow-[0_35px_135px_rgba(0,0,0,0.5)] px-6 pt-6 h-full fixed w-[25%]  right-0 bottom-0"
+                  }`}
+              >
+                <div className="flex  items-center justify-between">
+                  <h1 className="text-gray-900 font-bold text-xl">
+                    Diskusi ({totalCount})
+                  </h1>
+                  <div className="flex  space-x-4 items-center">
+                    <Tooltip
+                      // options
+                      title="View Community Guidelines"
+                      position="bottom"
+                      trigger="mouseenter"
+                      arrow={true}
+                      delay={300}
+                      hideDelay={0}
+                      distance={20}
+                    >
+                      <div className="flex space-x-2 cursor-pointer">
+                        <MdOutlinePrivacyTip className="text-xl text-gray-700 hover:text-gray-900 duration-500 cursor-pointer " />
+                      </div>
+                    </Tooltip>
+
+                    <VscClose
+                      onClick={() => setcommentside(false)}
+                      className="text-2xl text-gray-700 hover:text-gray-900 duration-500 cursor-pointer"
+                    />
+                  </div>{" "}
+                </div>
+
+                <div className="">
+                  <div>
+                    <Komentar id={id} slug={slug} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* comment and like */}
+            <div
+              ref={myRef}
+              id="hide"
+              className="flex mb-8 mt-16 justify-between items-center"
+            >
               <div className="flex  space-x-8  items-center">
                 {" "}
-                <div className="flex space-x-2 ">
+                <div className="flex space-x-2">
                   <Tooltip
+                    // options
+
                     title="Likes"
                     position="top"
                     trigger="mouseenter"
@@ -448,15 +704,14 @@ const Post = ({ user }) => {
                     hideDelay={0}
                     distance={20}
                   >
-                    <div className="flex cursor-not-allowed items-center space-x-2 cursor-pointer">
+                    <div className="flex cursor-not-allowed space-x-2 cursor-pointer">
                       <button onClick={handleLike}>
                         <svg
                           width="24"
                           height="24"
                           viewBox="0 0 24 24"
                           aria-label="clap"
-                          className={`${isLiked ? 'text-yellow-500' : ''} fill-current`}
-
+                          className={`${isLiked ? 'text-yellow-500' : 'gray'}`}
                         >
                           <path
                             fillRule="evenodd"
@@ -465,9 +720,8 @@ const Post = ({ user }) => {
                           ></path>
                         </svg>
                       </button>
-                      <span className="text-sm  text-gray-500">
-                        {likeCount}
-                      </span>
+
+                      <span className="text-sm text-gray-500">{likeCount}</span>
                     </div>
                   </Tooltip>
                 </div>
@@ -484,7 +738,7 @@ const Post = ({ user }) => {
                   >
                     <div
                       onClick={() => setcommentside(true)}
-                      className="flex space-x-2 items-center cursor-pointer"
+                      className="flex space-x-2 cursor-pointer"
                     >
                       <Comment />
                       <span className="text-sm text-gray-500">
@@ -494,794 +748,675 @@ const Post = ({ user }) => {
                   </Tooltip>
                 </div>
               </div>
+              <div className="flex  cursor-not-allowed  space-x-2 ">
+                <Tooltip
+                  // options
+                  title="Belum bekerja"
+                  position="top"
+                  trigger="mouseenter"
+                  arrow={true}
+                  delay={300}
+                  hideDelay={0}
+                  distance={20}
+                >
+                  <div className=" cursor-not-allowed flex space-x-2">
+                    <Save />
+                  </div>
+                </Tooltip>
+              </div>
             </div>
-          </div>
 
-          {/* like x Comment fixed */}
+            <div className="">
 
-          <article className="">
-            <h1 className="text-[32px] border-b-[1px] font-bold  mb-3 text-black ">
-              {title}
-            </h1>
-            <h2 className="text-[20px]  font-light text-gray-500">
-              {deskripsi_kecil}
-            </h2>
-            {isopen && (
-              <div
-                onClick={() => setisopen(false)}
-                className="fixed inset-0 z-40 bg-gray-200/95"
-              ></div>
-            )}
-            <div onClick={() => setisopen((prev) => !prev)}>
-              <img
-                className={`${isopen
-                  ? "max-h-[600px]  fixed z-50  m-auto inset-x-0 inset-y-0 p-2 bg-white rounded-sm overflow-y-scroll cursor-zoom-out   duration-500 ease-in-out"
-                  : "h-auto  cursor-zoom-in my-8 w-full object-cover   duration-500 ease-in-out"
-                  }`}
-                src={gambar}
-                alt="image"
-              />
-            </div>
-          </article>
-          <div>
-            {parse(deskripsi_panjang)}
-          </div>
-          {/* side comment */}
+              <div className="w-full">
 
-          <div className="">
-            {commentside && (
-              <div
-                onClick={() => setcommentside(false)}
-                className="fixed cursor-pointer z-40 inset-0 bg-gray-600/20"
-              ></div>
-            )}
-            <div
-              className={`${commentside
-                ? "bg-white overflow-x-hidden z-[100]  overflow-y-scroll translate-x-[0%] duration-500 drop-shadow-[0_35px_135px_rgba(0,0,0,0.5)] px-6 pt-6 h-full fixed w-[90%] md:w-[60%] lg:w-[45%] xl:w-[25%]  right-0 bottom-0"
-                : "bg-white  translate-x-[300%] duration-500 drop-shadow-[0_35px_135px_rgba(0,0,0,0.5)] px-6 pt-6 h-full fixed w-[25%]  right-0 bottom-0"
-                }`}
-            >
-              <div className="flex  items-center justify-between">
-                <h1 className="text-gray-900 font-bold text-xl">
-                  Responses ({totalCount})
-                </h1>
-                <div className="flex  space-x-4 items-center">
+                {/* write on medium */}
+                <div className="border-b-[1px] border-gray-200 my-10 " />
+                <div className="flex justify-center items-center space-x-4">
+                  <h1>Bagikan ide Anda dengan jutaan pembaca.</h1>
                   <Tooltip
-                    // options
-                    title="View Community Guidelines"
-                    position="bottom"
+                    title="Belum bekerja"
+                    position="right"
                     trigger="mouseenter"
                     arrow={true}
                     delay={300}
                     hideDelay={0}
                     distance={20}
                   >
-                    <div className="flex space-x-2 cursor-pointer">
-                      <MdOutlinePrivacyTip className="text-xl text-gray-700 hover:text-gray-900 duration-500 cursor-pointer " />
-                    </div>
-                  </Tooltip>
-
-                  <VscClose
-                    onClick={() => setcommentside(false)}
-                    className="text-2xl text-gray-700 hover:text-gray-900 duration-500 cursor-pointer"
-                  />
-                </div>{" "}
-              </div>
-
-              <div className="">
-                {comments.length === 0 ? (
-                  <div className="my-[50%]">
-                    <h2 className="text-xl text-gray-800">
-                      Tidak ada komentar di artikel ini
-                    </h2>
-                    <h3 className="my-4 text-gray-700">
-                      Jadi yang pertama untuk merespon.
-                    </h3>
-                  </div>
-                ) : (
-                  <div>
-                    <Komentar id={id} />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* comment and like */}
-          <div
-            ref={myRef}
-            id="hide"
-            className="flex mb-8 mt-16 justify-between items-center"
-          >
-            <div className="flex  space-x-8  items-center">
-              {" "}
-              <div className="flex space-x-2">
-                <Tooltip
-                  // options
-
-                  title="Likes"
-                  position="top"
-                  trigger="mouseenter"
-                  arrow={true}
-                  delay={300}
-                  hideDelay={0}
-                  distance={20}
-                >
-                  <div className="flex cursor-not-allowed space-x-2 cursor-pointer">
-                    <button onClick={handleLike}>
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        aria-label="clap"
-                        className={`${isLiked ? 'text-yellow-500' : 'gray'}`}
-                      >
-                        <path
-                          fillRule="evenodd"
-                          clipRule="evenodd"
-                          d="M11.37.83L12 3.28l.63-2.45h-1.26zM13.92 3.95l1.52-2.1-1.18-.4-.34 2.5zM8.59 1.84l1.52 2.11-.34-2.5-1.18.4zM18.52 18.92a4.23 4.23 0 0 1-2.62 1.33l.41-.37c2.39-2.4 2.86-4.95 1.4-7.63l-.91-1.6-.8-1.67c-.25-.56-.19-.98.21-1.29a.7.7 0 0 1 .55-.13c.28.05.54.23.72.5l2.37 4.16c.97 1.62 1.14 4.23-1.33 6.7zm-11-.44l-4.15-4.15a.83.83 0 0 1 1.17-1.17l2.16 2.16a.37.37 0 0 0 .51-.52l-2.15-2.16L3.6 11.2a.83.83 0 0 1 1.17-1.17l3.43 3.44a.36.36 0 0 0 .52 0 .36.36 0 0 0 0-.52L5.29 9.51l-.97-.97a.83.83 0 0 1 0-1.16.84.84 0 0 1 1.17 0l.97.97 3.44 3.43a.36.36 0 0 0 .51 0 .37.37 0 0 0 0-.52L6.98 7.83a.82.82 0 0 1-.18-.9.82.82 0 0 1 .76-.51c.22 0 .43.09.58.24l5.8 5.79a.37.37 0 0 0 .58-.42L13.4 9.67c-.26-.56-.2-.98.2-1.29a.7.7 0 0 1 .55-.13c.28.05.55.23.73.5l2.2 3.86c1.3 2.38.87 4.59-1.29 6.75a4.65 4.65 0 0 1-4.19 1.37 7.73 7.73 0 0 1-4.07-2.25zm3.23-12.5l2.12 2.11c-.41.5-.47 1.17-.13 1.9l.22.46-3.52-3.53a.81.81 0 0 1-.1-.36c0-.23.09-.43.24-.59a.85.85 0 0 1 1.17 0zm7.36 1.7a1.86 1.86 0 0 0-1.23-.84 1.44 1.44 0 0 0-1.12.27c-.3.24-.5.55-.58.89-.25-.25-.57-.4-.91-.47-.28-.04-.56 0-.82.1l-2.18-2.18a1.56 1.56 0 0 0-2.2 0c-.2.2-.33.44-.4.7a1.56 1.56 0 0 0-2.63.75 1.6 1.6 0 0 0-2.23-.04 1.56 1.56 0 0 0 0 2.2c-.24.1-.5.24-.72.45a1.56 1.56 0 0 0 0 2.2l.52.52a1.56 1.56 0 0 0-.75 2.61L7 19a8.46 8.46 0 0 0 4.48 2.45 5.18 5.18 0 0 0 3.36-.5 4.89 4.89 0 0 0 4.2-1.51c2.75-2.77 2.54-5.74 1.43-7.59L18.1 7.68z"
-                        ></path>
-                      </svg>
+                    <button className="bg-gray-800 cursor-not-allowed text-sm hover:bg-gray-900 duration-500 px-4 py-2 text-white rounded-full">
+                      Write on medium
                     </button>
-
-                    <span className="text-sm text-gray-500">{likeCount}</span>
-                  </div>
-                </Tooltip>
-              </div>
-              <div className="flex space-x-2">
-                <Tooltip
-                  // options
-                  title="Respond"
-                  position="top"
-                  trigger="mouseenter"
-                  arrow={true}
-                  delay={300}
-                  hideDelay={0}
-                  distance={20}
-                >
-                  <div
-                    onClick={() => setcommentside(true)}
-                    className="flex space-x-2 cursor-pointer"
-                  >
-                    <Comment />
-                    <span className="text-sm text-gray-500">
-                      {totalCount}
-                    </span>
-                  </div>
-                </Tooltip>
-              </div>
-            </div>
-            <div className="flex  cursor-not-allowed  space-x-2 ">
-              <Tooltip
-                // options
-                title="Belum bekerja"
-                position="top"
-                trigger="mouseenter"
-                arrow={true}
-                delay={300}
-                hideDelay={0}
-                distance={20}
-              >
-                <div className=" cursor-not-allowed flex space-x-2">
-                  <Save />
+                  </Tooltip>
                 </div>
-              </Tooltip>
-            </div>
-          </div>
 
-          <div className="">
-
-            <div className="w-full">
-
-              {/* write on medium */}
-              <div className="border-b-[1px] border-gray-200 my-10 " />
-              <div className="flex justify-center items-center space-x-4">
-                <h1>Bagikan ide Anda dengan jutaan pembaca.</h1>
-                <Tooltip
-                  title="Belum bekerja"
-                  position="right"
-                  trigger="mouseenter"
-                  arrow={true}
-                  delay={300}
-                  hideDelay={0}
-                  distance={20}
-                >
-                  <button className="bg-gray-800 cursor-not-allowed text-sm hover:bg-gray-900 duration-500 px-4 py-2 text-white rounded-full">
-                    Write on medium
-                  </button>
-                </Tooltip>
-              </div>
-
-              {/* posts on map */}
-              <div className="border-b-[1px] border-gray-200 my-10 " />
-              <h3 className="text-gray-900 text-md font-semibold capitalize">Terbaru di Penaly</h3>
-              {postsNew.slice(0, 10)?.map((post) => (
-                <div key={post.id}>
-                  <Link
-                    passHref
-                    key={post.id}
-                    href={`/post/${post.slug}`}
-                  >
-                    <div className="flex  space-y-4 justify-between items-center">
-                      <div className="space-y-2 flex flex-col  cursor-pointer">
-                        <div>
-                          <p className="text-sm text-gray-500">
-                            <FormatDate timestamp={post.dibuat_pada} />
-                          </p>
-                          <p className="sm:text-[21px] text-[18px]  font-semibold ">
-                            {post.title}
-                          </p>
-                        </div>
-                        <div className="sm:line-clamp-3 line-clamp-2 text-[13px] sm:text-[15px] text-gray-900">
-                          {" "}
-                          {post.deskripsi_kecil}
-                        </div>
-                      </div>
-                      <img
-                        className="object-cover cursor-pointer w-24 h-24 sm:w-36 ml-10 sm:h-36"
-                        src={post.gambar}
-                        alt={post.title}
-                      />
-                    </div>
-                  </Link>
-                  <div className="border-b-[1px] border-gray-200 my-10 " />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* posts on map */}
-
-      {/* third section */}
-      <div className="h-[110vh]   hidescrollbar relative hidden xl:flex">
-        <div
-          className={`${user
-            ? "fixed     bottom-0 top-0 overflow-y-scroll  w-[380px] col-span-2 px-8 py-0"
-            : "fixed    bottom-0 top-0 overflow-y-scroll  w-[380px] col-span-2 px-8 py-16"
-            }`}
-        >
-          {!user && (
-            <div className="space-x-8">
-              <button
-                onClick={() => setsignup(true)}
-                className="bg-gray-800 hover:bg-gray-900 duration-500 px-16 py-2 rounded-full text-white"
-              >
-                Get started
-              </button>
-              <button
-                onClick={() => {
-                  setsignup(true);
-                  setsign(1);
-                }}
-                className="text-black hover:text-green-600"
-              >
-                Sign in
-              </button>
-            </div>
-          )}
-          <div className="w-full py-10 relative">
-            <input
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-              }}
-              className="px-12 w-[100%] py-2 rounded-full border-gray-200 border-[1px] outline-none text-sm"
-              type="text"
-              placeholder="Search.."
-              name=""
-              id=""
-            />
-            <FiSearch className="absolute -translate-y-1/2 top-1/2  -translate-x-1/2 left-8 h-4" />
-          </div>
-          <div>
-            {searchTerm !== "" && (
-              <div
-                className={`${user
-                  ? "bg-gray-100 w-[330px] top-[95px]  absolute p-4 space-y-2 rounded-md shadow-lg backdrop-blur-xl"
-                  : "bg-gray-100 w-[330px]  top-[200px]  absolute p-4 space-y-2 rounded-md shadow-lg backdrop-blur-xl"
-                  }`}
-              >
-                <h2 className="mt-4">Dari Penaly</h2>
-                <hr />
-                {posts
-                  .filter((val) => {
-                    if (
-                      val.title.toLowerCase().includes(searchTerm.toLowerCase())
-                    ) {
-                      return val;
-                    } else if (searchTerm == "") {
-                      return val;
-                    }
-                  })
-                  .map((post) => {
-                    return (
-                      <>
-                        <div>
-                          <Link
-                            passHref
-                            key={post.id}
-                            href={`/post/${post.slug}`}
-                          >
-                            <div key={post.id}>
-                              <div className="my-8 cursor-pointer ">
-                                <h2 className="text-sm word-breaks text-gray-900 hover:text-black duration-100">
-                                  {post.title}
-                                </h2>
-
-                                <h2 className="text-xs text-gray-500">
-                                  {" "}
-                                  <FormatDate timestamp={post.dibuat_pada} />
-                                </h2>
-                              </div>
-                            </div>
-                          </Link>
-                        </div>
-                      </>
-                    );
-                  })}
-              </div>
-            )}
-          </div>
-          {/* //* Sidebar */}
-          <div>
-            <div>
-              <img
-                className="h-24 w-24 object-cover rounded-full"
-                src={penulisFoto}
-                alt=""
-              />
-              <h1 className="font-bold py-4 text-gray-900">
-                {penulis}
-              </h1>
-              <h2 className="text-gray-500 text-sm">
-                {penulisBio}
-              </h2>
-              <br />
-              <hr />
-              <div className="py-4">
-                <h2 className="text-gray-900 text-md font-semibold capitalize">
-                  Paling Disukai di Penaly
-                </h2>
-                <div className="py-6">
-                  {posts.slice(0, 5)?.map((post) => (
+                {/* posts on map */}
+                <div className="border-b-[1px] border-gray-200 my-10 " />
+                <h3 className="text-gray-900 text-md font-semibold capitalize">Terbaru di Penaly</h3>
+                {postsNew.slice(0, 10)?.map((post) => (
+                  <div key={post.id}>
                     <Link
                       passHref
                       key={post.id}
                       href={`/post/${post.slug}`}
                     >
-                      <div className="flex items-start justify-between py-4">
-                        <div className="space-y-2 flex flex-col jusify-center cursor-pointer">
-                          <div className="flex items-center space-x-2">
-                            {" "}
-                            <img
-                              alt="r"
-                              className="h-6 rounded-full"
-                              src={post.user.foto}
-                            />
-                            <span className="text-sm font-normal capitalize">
-                              {post.user.username}
-                            </span>
-                          </div>
+                      <div className="flex  space-y-4 justify-between items-center">
+                        <div className="space-y-2 flex flex-col  cursor-pointer">
                           <div>
-                            <p className="text-[16px] text-md font-semibold w-[225px]">
+                            <p className="text-sm text-gray-500">
+                              <FormatDate timestamp={post.dibuat_pada} />
+                            </p>
+                            <p className="sm:text-[21px] text-[18px]  font-semibold ">
                               {post.title}
                             </p>
                           </div>
+                          <div className="sm:line-clamp-3 line-clamp-2 text-[13px] sm:text-[15px] text-gray-900">
+                            {" "}
+                            {post.deskripsi_kecil}
+                          </div>
                         </div>
-                        <div className="h-16 w-16 flex justify-start">
-                          <img
-                            className="h-full w-full rounded-md cursor-pointer  object-cover group-hover:scale-105 transition-transform duration-200 ease-in-out"
-                            src={post.gambar}
-                            alt="image"
-                          />
-                        </div>
+                        <img
+                          className="object-cover cursor-pointer w-24 h-24 sm:w-36 ml-10 sm:h-36"
+                          src={post.gambar}
+                          alt={post.title}
+                        />
                       </div>
                     </Link>
-                  ))}
+                    <div className="border-b-[1px] border-gray-200 my-10 " />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* posts on map */}
+
+        {/* third section */}
+        <div className="h-[110vh]   hidescrollbar relative hidden xl:flex">
+          <div
+            className={`${user
+              ? "fixed     bottom-0 top-0 overflow-y-scroll  w-[380px] col-span-2 px-8 py-0"
+              : "fixed    bottom-0 top-0 overflow-y-scroll  w-[380px] col-span-2 px-8 py-16"
+              }`}
+          >
+            {!user && (
+              <div className="space-x-8">
+                <button
+                  onClick={() => setsignup(true)}
+                  className="bg-gray-800 hover:bg-gray-900 duration-500 px-16 py-2 rounded-full text-white"
+                >
+                  Get started
+                </button>
+                <button
+                  onClick={() => {
+                    setsignup(true);
+                    setsign(1);
+                  }}
+                  className="text-black hover:text-green-600"
+                >
+                  Sign in
+                </button>
+              </div>
+            )}
+            <div className="w-full py-10 relative">
+              <input
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                }}
+                className="px-12 w-[100%] py-2 rounded-full border-gray-200 border-[1px] outline-none text-sm"
+                type="text"
+                placeholder="Search.."
+                name=""
+                id=""
+              />
+              <FiSearch className="absolute -translate-y-1/2 top-1/2  -translate-x-1/2 left-8 h-4" />
+            </div>
+            <div>
+              {searchTerm !== "" && (
+                <div
+                  className={`${user
+                    ? "bg-gray-100 w-[330px] top-[95px]  absolute p-4 space-y-2 rounded-md shadow-lg backdrop-blur-xl"
+                    : "bg-gray-100 w-[330px]  top-[200px]  absolute p-4 space-y-2 rounded-md shadow-lg backdrop-blur-xl"
+                    }`}
+                >
+                  <h2 className="mt-4">Dari Penaly</h2>
+                  <hr />
+                  {posts
+                    .filter((val) => {
+                      if (
+                        val.title.toLowerCase().includes(searchTerm.toLowerCase())
+                      ) {
+                        return val;
+                      } else if (searchTerm == "") {
+                        return val;
+                      }
+                    })
+                    .map((post) => {
+                      return (
+                        <>
+                          <div>
+                            <Link
+                              passHref
+                              key={post.id}
+                              href={`/post/${post.slug}`}
+                            >
+                              <div key={post.id}>
+                                <div className="my-8 cursor-pointer ">
+                                  <h2 className="text-sm word-breaks text-gray-900 hover:text-black duration-100">
+                                    {post.title}
+                                  </h2>
+
+                                  <h2 className="text-xs text-gray-500">
+                                    {" "}
+                                    <FormatDate timestamp={post.dibuat_pada} />
+                                  </h2>
+                                </div>
+                              </div>
+                            </Link>
+                          </div>
+                        </>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+            {/* //* Sidebar */}
+            <div>
+              <div>
+                <img
+                  className="h-24 w-24 object-cover rounded-full"
+                  src={penulisFoto}
+                  alt=""
+                />
+                <h1 className="font-bold py-4 text-gray-900">
+                  {penulis}
+                </h1>
+                <h2 className="text-gray-500 text-sm">
+                  {penulisBio}
+                </h2>
+                <br />
+                <hr />
+                <div className="py-4">
+                  <h2 className="text-gray-900 text-md font-semibold capitalize">
+                    Paling Disukai di Penaly
+                  </h2>
+                  <div className="py-6">
+                    {posts.slice(0, 5)?.map((post) => (
+                      <Link
+                        passHref
+                        key={post.id}
+                        href={`/post/${post.slug}`}
+                      >
+                        <div className="flex items-start justify-between py-4">
+                          <div className="space-y-2 flex flex-col jusify-center cursor-pointer">
+                            <div className="flex items-center space-x-2">
+                              {" "}
+                              <img
+                                alt="r"
+                                className="h-6 rounded-full"
+                                src={post.user.foto}
+                              />
+                              <span className="text-sm font-normal capitalize">
+                                {post.user.username}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-[16px] text-md font-semibold w-[225px]">
+                                {post.title}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="h-16 w-16 flex justify-start">
+                            <img
+                              className="h-full w-full rounded-md cursor-pointer  object-cover group-hover:scale-105 transition-transform duration-200 ease-in-out"
+                              src={post.gambar}
+                              alt="image"
+                            />
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      {/* SIGN UP */}
-      {(() => {
-        if (sign === 0) {
-          return (
-            <div className="text-center">
-              <div
-                onClick={() => {
-                  setsignup(false);
-                  setsign(0);
-                }}
-                className={`${signup
-                  ? "fixed inset-0 bg-gray-100   backdrop-blur-md duration-500  bg-opacity-60 ease-in-out transition-all  overflow-y-hidden flex justify-center items-center "
-                  : "fixed inset-0 backdrop-blur-0 pointer-events-none duration-500  bg-opacity-0  ease-in-out transition-all overflow-y-hidden   "
-                  }`}
-              />
-              <div
-                className={`${signup
-                  ? "scale-100  z-[100] md:z-10 ease-in-out duration-500 min-h-full md:min-h-[600px] w-full md:w-auto md:h-auto md:m-auto  rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
-                  : "scale-0  ease-in-out duration-500 h-[600px] w-[500px]   rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
-                  }`}
-              >
-                {signup && (
-                  <div className="w-full  md:mx-[20rem] my-[10rem]">
-                    <div
-                      className="p-4  cursor-pointer  z-50  absolute top-0 pt-10 pr-10 right-0"
-                      onClick={() => setsignup(false)}
-                    >
-                      <VscClose className="h-8 w-8  text-gray-400 hover:text-gray-700 duration-100 text-2xl cursor-pointer" />
-                    </div>
-                    <div className="px-10  md:-translate-0 absolute w-full m-auto -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-                      <div className="">
-                        <div className="capitalize flex-col font-poppins text-2xl  flex justify-center my-10">
-                          <h1 className="py-10">Join Medium.</h1>
-                          <h2 className="text-sm max-w-[24rem] m-auto">
-                            Create an account to receive great stories in your
-                            inbox, personalize your homepage, and follow authors
-                            and topics that you love.
-                          </h2>
-                        </div>
-                        <div>
-                          <div
-                            onClick={signUpWithGoogle}
-                            className="flex w-fit m-auto  items-center justify-center space-x-4 border-[1px] mb-[13px] px-4 py-2 cursor-pointer  border-gray-600 hover:border-gray-900 rounded-full font-poppins text-sm text-gray-800"
-                          >
-                            <FcGoogle className="h-[19px] w-[19px]" />
-                            <h2>Sign up with Google</h2>
+        {/* SIGN UP */}
+        {(() => {
+          if (sign === 0) {
+            return (
+              <div className="text-center">
+                <div
+                  onClick={() => {
+                    setsignup(false);
+                    setsign(0);
+                  }}
+                  className={`${signup
+                    ? "fixed inset-0 bg-gray-100   backdrop-blur-md duration-500  bg-opacity-60 ease-in-out transition-all  overflow-y-hidden flex justify-center items-center "
+                    : "fixed inset-0 backdrop-blur-0 pointer-events-none duration-500  bg-opacity-0  ease-in-out transition-all overflow-y-hidden   "
+                    }`}
+                />
+                <div
+                  className={`${signup
+                    ? "scale-100  z-[100] md:z-10 ease-in-out duration-500 min-h-full md:min-h-[600px] w-full md:w-auto md:h-auto md:m-auto  rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
+                    : "scale-0  ease-in-out duration-500 h-[600px] w-[500px]   rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
+                    }`}
+                >
+                  {signup && (
+                    <div className="w-full  md:mx-[20rem] my-[10rem]">
+                      <div
+                        className="p-4  cursor-pointer  z-50  absolute top-0 pt-10 pr-10 right-0"
+                        onClick={() => setsignup(false)}
+                      >
+                        <VscClose className="h-8 w-8  text-gray-400 hover:text-gray-700 duration-100 text-2xl cursor-pointer" />
+                      </div>
+                      <div className="px-10  md:-translate-0 absolute w-full m-auto -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
+                        <div className="">
+                          <div className="capitalize flex-col font-poppins text-2xl  flex justify-center my-10">
+                            <h1 className="py-10">Bergabung di Penaly.</h1>
+                            <h2 className="text-sm max-w-[24rem] m-auto">
+                              Buat akun untuk membuat artikel anda dengan gratis, baca artikel menarik dan beredukasi,
+                              dan berdiskusi tentang artikel yang anda pilih dengan berbagai pengguna di selurh dunia.
+                            </h2>
                           </div>
-                          <div
-                            onClick={() => {
-                              setsign(2);
-                            }}
-                            className="flex w-fit m-auto  items-center justify-center space-x-4 border-[1px] mb-10 px-[21px] py-2 cursor-pointer  border-gray-600 hover:border-gray-900 rounded-full font-poppins text-sm text-gray-800"
-                          >
-                            <IoMailOutline className="h-[19px] w-[19px] text-black" />
-                            <h2>Sign up with Email </h2>
+                          <div>
+                            <div
+                              onClick={() => {
+                                setsign(2);
+                              }}
+                              className="flex w-fit m-auto  items-center justify-center space-x-4 border-[1px] mb-10 px-[21px] py-2 cursor-pointer  border-gray-600 hover:border-gray-900 rounded-full font-poppins text-sm text-gray-800"
+                            >
+                              <IoMailOutline className="h-[19px] w-[19px] text-black" />
+                              <h2>Daftar menggunakan Email </h2>
+                            </div>
                           </div>
-                        </div>
-                        <div className="font-poppins mb-16 text-sm flex justify-center">
-                          Already have an account? {"  "}
-                          <span
-                            onClick={() => setsign(1)}
-                            className="text-green-600 cursor-pointer font-bold ml-2"
-                          >
-                            {" "}
-                            Sign in
-                          </span>
-                        </div>
-                        <div className="font-poppins  mb-20   text-center text-gray-600 text-xs flex justify-center items-center">
-                          <h2>
-                            Click “Sign Up” to agree to Medium’s Terms of
-                            Service and acknowledge that Medium’s Privacy Policy
-                            applies to you.
-                          </h2>
+                          <div className="font-poppins mb-16 text-sm flex justify-center">
+                            Sudah punya Akun? {"  "}
+                            <span
+                              onClick={() => setsign(1)}
+                              className="text-green-600 cursor-pointer font-bold ml-2"
+                            >
+                              {" "}
+                              Masuk
+                            </span>
+                          </div>
+                          <div className="font-poppins  mb-20   text-center text-gray-600 text-xs flex justify-center items-center">
+                            <h2>
+                              Klik "Daftar" untuk menyetujui Persyaratan Layanan Penaly dan mengakui bahwa Kebijakan Privasi Penaly berlaku untuk Anda.
+                            </h2>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        } else if (sign === 1) {
-          return (
-            <div className="text-center ">
-              <div
-                onClick={() => {
-                  setsignup(false);
-                  setsign(0);
-                }}
-                className={`${signup
-                  ? "fixed inset-0 bg-gray-100  backdrop-blur-md duration-500  bg-opacity-60 ease-in-out transition-all  overflow-y-hidden flex justify-center items-center "
-                  : "fixed inset-0 backdrop-blur-0 pointer-events-none duration-500  bg-opacity-0  ease-in-out transition-all overflow-y-hidden   "
-                  }`}
-              />
-              <div
-                className={`${signup
-                  ? "scale-100 z-[100] md:z-10  ease-in-out duration-500 min-h-full md:min-h-[600px] w-full md:w-auto md:h-auto md:m-auto   rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
-                  : "scale-0  ease-in-out duration-500 h-[600px] w-[500px]   rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
-                  }`}
-              >
-                {signup && (
-                  <div className="w-full md:px-[20rem] py-[10rem]">
-                    <div
-                      className="p-4 z-50 cursor-pointer absolute top-0 pt-10 pr-10 right-0"
-                      onClick={() => setsignup(false)}
-                    >
-                      <VscClose className="h-8 w-8 text-gray-400 hover:text-gray-700 duration-100 text-2xl cursor-pointer" />
-                    </div>
-                    <div className="px-10  md:-translate-0 absolute w-full m-auto -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-                      <div className="">
-                        <div className="capitalize  font-poppins text-2xl  flex justify-center py-10">
-                          <h1>Welcome back.</h1>
-                        </div>
-                        <div>
-                          <div
-                            onClick={signInWithGoogle}
-                            className="flex w-fit m-auto  items-center justify-center space-x-4 border-[1px] mb-[13px] px-4 py-2 cursor-pointer  border-gray-600 hover:border-gray-900 rounded-full font-poppins text-sm text-gray-800"
-                          >
-                            <FcGoogle />
-                            <h2>Sign in with Google</h2>
+            ); // * Auth Info
+          } else if (sign === 1) {
+            return (
+              <div className="text-center ">
+                <div
+                  onClick={() => {
+                    setsignup(false);
+                    setsign(0);
+                  }}
+                  className={`${signup
+                    ? "fixed inset-0 bg-gray-100  backdrop-blur-md duration-500  bg-opacity-60 ease-in-out transition-all  overflow-y-hidden flex justify-center items-center "
+                    : "fixed inset-0 backdrop-blur-0 pointer-events-none duration-500  bg-opacity-0  ease-in-out transition-all overflow-y-hidden   "
+                    }`}
+                />
+                <div
+                  className={`${signup
+                    ? "scale-100 z-[100] md:z-10  ease-in-out duration-500 min-h-full md:min-h-[600px] w-full md:w-auto md:h-auto md:m-auto   rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
+                    : "scale-0  ease-in-out duration-500 h-[600px] w-[500px]   rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
+                    }`}
+                >
+                  {signup && (
+                    <div className="w-full md:px-[20rem] py-[10rem]">
+                      <div
+                        className="p-4 z-50 cursor-pointer absolute top-0 pt-10 pr-10 right-0"
+                        onClick={() => setsignup(false)}
+                      >
+                        <VscClose className="h-8 w-8 text-gray-400 hover:text-gray-700 duration-100 text-2xl cursor-pointer" />
+                      </div>
+                      <div className="px-10  md:-translate-0 absolute w-full m-auto -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
+                        <div className="">
+                          <div className="capitalize  font-poppins text-2xl  flex justify-center py-10">
+                            <h1>Selamat datang!</h1>
                           </div>
-                          <div
-                            onClick={() => {
-                              setsign(3);
-                            }}
-                            className="flex w-fit m-auto  items-center justify-center space-x-4 border-[1px] mb-10 px-[21px] py-2 cursor-pointer  border-gray-600 hover:border-gray-900 rounded-full font-poppins text-sm text-gray-800"
-                          >
-                            <IoMailOutline className="h-[19px] w-[19px] text-black" />
-                            <h2>Sign in with Email </h2>
+                          <div>
+                            <div
+                              onClick={() => {
+                                setsign(3);
+                              }}
+                              className="flex w-fit m-auto  items-center justify-center space-x-4 border-[1px] mb-10 px-[21px] py-2 cursor-pointer  border-gray-600 hover:border-gray-900 rounded-full font-poppins text-sm text-gray-800"
+                            >
+                              <IoMailOutline className="h-[19px] w-[19px] text-black" />
+                              <h2>Masuk menggunakan Email </h2>
+                            </div>
                           </div>
-                        </div>
-                        <div className="font-poppins mb-16 text-sm flex justify-center">
-                          No account?
-                          <span
-                            onClick={() => setsign(0)}
-                            className="text-green-600 cursor-pointer font-bold ml-2"
-                          >
-                            {" "}
-                            Create one
-                          </span>
-                        </div>
-                        <div className="font-poppins  mb-20   text-center text-gray-600 text-xs flex justify-center items-center">
-                          <h2>
-                            Click “Sign In” to agree to Medium’s Terms of
-                            Service and acknowledge that Medium’s Privacy Policy
-                            applies to you.
-                          </h2>
+                          <div className="font-poppins mb-16 text-sm flex justify-center">
+                            Tidak punya akun?
+                            <span
+                              onClick={() => setsign(0)}
+                              className="text-green-600 cursor-pointer font-bold ml-2"
+                            >
+                              {" "}
+                              Buat Akun
+                            </span>
+                          </div>
+                          <div className="font-poppins  mb-20   text-center text-gray-600 text-xs flex justify-center items-center">
+                            <h2>
+                              Klik "Masuk" untuk menyetujui Persyaratan Layanan Penaly dan mengakui bahwa Kebijakan Privasi Penaly berlaku untuk Anda.
+                            </h2>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        } else if (sign === 2) {
-          return (
-            <div className="text-center ">
-              <div
-                onClick={() => {
-                  setsignup(false);
-                  setsign(0);
-                }}
-                className={`${signup
-                  ? "fixed inset-0 bg-gray-100  backdrop-blur-md duration-500  bg-opacity-60 ease-in-out transition-all  overflow-y-hidden flex justify-center items-center "
-                  : "fixed inset-0 backdrop-blur-0 pointer-events-none duration-500  bg-opacity-0  ease-in-out transition-all overflow-y-hidden   "
-                  }`}
-              />
-              <div
-                className={`${signup
-                  ? "scale-100 z-[100] md:z-10  ease-in-out duration-500 min-h-full md:min-h-[600px] w-full md:w-auto md:h-auto md:m-auto   rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
-                  : "scale-0  ease-in-out duration-500 h-[600px] w-[500px]   rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
-                  }`}
-              >
-                {signup && (
-                  <div className="w-full md:px-[20rem] py-[10rem]">
-                    <div
-                      className="p-4 cursor-pointer absolute top-0 pt-10 pr-10 right-0"
-                      onClick={() => setsignup(false)}
-                    >
-                      <VscClose className="h-8 w-8 text-gray-400 hover:text-gray-700 duration-100 text-2xl cursor-pointer" />
-                    </div>
-                    <div className="px-10  md:-translate-0 absolute w-full m-auto -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-                      <div className="">
-                        <div className="capitalize flex flex-col  font-poppins text-2xl  space-y-2 justify-center py-10">
-                          <h1>Sign up with email</h1>
-                          <h2 className="capitalize  font-poppins text-sm  ">
-                            Enter your email address to create an account.
-                          </h2>
-                        </div>
-                        <form
-                          onSubmit={handlesubmit}
-                          className="flex flex-col w-[90%] sm:w-[60%]  mb-10 mt-6 m-auto "
-                        >
-                          <label
-                            className="text-gray-900 text-sm"
-                            htmlFor="email"
+            ); // * Sign Up From
+          } else if (sign === 2) {
+            return (
+              <div className="text-center">
+                <div
+                  onClick={() => {
+                    setsignup(false);
+                    setsign(0);
+                  }}
+                  className={`${signup
+                    ? "fixed inset-0 bg-gray-100 backdrop-blur-md duration-500 bg-opacity-60 ease-in-out transition-all overflow-y-hidden flex justify-center items-center"
+                    : "fixed inset-0 backdrop-blur-0 pointer-events-none duration-500 bg-opacity-0 ease-in-out transition-all overflow-y-hidden"
+                    }`}
+                />
+                <div
+                  className={`${signup
+                    ? "scale-100 z-[100] md:z-10 ease-in-out duration-500 min-h-full md:min-h-[800px] w-full md:w-auto md:h-auto md:m-auto rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
+                    : "scale-0 ease-in-out duration-500 h-[800px] w-[500px] rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
+                    }`}
+                >
+                  {signup && (
+                    <div className="w-full md:w-[500px] max-h-full md:max-h-full overflow-y-auto px-[20px] py-[10px]">
+                      <div
+                        className="p-4 cursor-pointer absolute top-0 pt-10 pr-10 right-0"
+                        onClick={() => setsignup(false)}
+                      >
+                        <VscClose className="h-8 w-8 text-gray-400 hover:text-gray-700 duration-100 text-2xl cursor-pointer" />
+                      </div>
+                      <div className="px-10 md:-translate-0 absolute w-full m-auto -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
+                        <div className="">
+                          <div className="capitalize flex flex-col font-poppins text-2xl space-y-2 justify-center py-10">
+                            <h1>Daftar menggunakan Email</h1>
+                            <h2 className="capitalize font-poppins text-sm">
+                              Masukkan informasi anda untuk membuat akun.
+                            </h2>
+                          </div>
+                          {error && (
+                            <Alert error={error} />
+                          )}
+                          <form
+                            onSubmit={submit}
+                            className="flex flex-col w-[90%] sm:w-[60%] mb-10 mt-6 m-auto"
                           >
-                            Your Email
-                          </label>
-                          <input
-                            id="email"
-                            name="email"
-                            onChange={(e) => {
-                              setregisteremail(e.target.value);
-                            }}
-                            className="w-full md:w-[80%] m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black"
-                            type="text"
-                            required
-                            max={20}
-                          />
-                          <label
-                            className="text-gray-900 text-sm mt-4"
-                            htmlFor="password"
-                          >
-                            Your password
-                          </label>
-                          <input
-                            onChange={(e) => {
-                              setregisterpassword(e.target.value);
-                            }}
-                            name="password"
-                            id="password"
-                            type="password"
-                            className="w-full my-2 md:w-[80%] m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black"
-                            required
-                            max={20}
-                          />
-                          <input
-                            className="px-8 mt-4 w-[70%] m-auto py-2 bg-gray-900 cursor-pointer hover:bg-black duration-100 rounded-full text-white"
-                            type="submit"
-                            value={successlogin ? "Successed" : "Continue"}
-                          />
-                          {messageerr && (
-                            <div className="mt-4 flex justify-start space-x-[8px] items-center">
-                              <BiErrorAlt className="text-red-500 h-6" />
-                              <h2 className="text-red-500">
-                                Invalid mail or password
-                              </h2>
+                            <label
+                              className="text-gray-900 text-sm"
+                              htmlFor="namaLengkap"
+                            >
+                              Nama Lengkap
+                            </label>
+                            <input
+                              id="namaLengkap"
+                              name="namaLengkap"
+                              onChange={(e) => {
+                                setFullName(e.target.value);
+                              }}
+                              className="w-full md:w-[80%] m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black"
+                              type="text"
+                              required
+                              maxLength={50}
+                            />
+                            <label
+                              className="text-gray-900 text-sm mt-4"
+                              htmlFor="username"
+                            >
+                              Username
+                            </label>
+                            <input
+                              id="username"
+                              name="username"
+                              onChange={(e) => {
+                                setUsername(e.target.value);
+                              }}
+                              className="w-full md:w-[80%] m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black"
+                              type="text"
+                              required
+                              maxLength={20}
+                            />
+                            <label
+                              className="text-gray-900 text-sm mt-4"
+                              htmlFor="email"
+                            >
+                              Email
+                            </label>
+                            <input
+                              id="email"
+                              name="email"
+                              onChange={(e) => {
+                                setEmail(e.target.value);
+                              }}
+                              className="w-full md:w-[80%] m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black"
+                              type="email"
+                              required
+                            />
+                            <label
+                              className="text-gray-900 text-sm mt-4"
+                              htmlFor="password"
+                            >
+                              Password
+                            </label>
+                            <input
+                              onChange={(e) => validatePassword(e.target.value)}
+                              name="password"
+                              id="password"
+                              type="password"
+                              required
+                              maxLength={20}
+                              className={
+                                passwordError
+                                  ? "w-full my-2 md:w-[80%] input-error m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black"
+                                  : "w-full my-2 md:w-[80%] m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black"
+                              }
+                            />
+                            <div
+                              style={{
+                                fontSize: '12px',
+                                textAlign: 'right',
+                                color: strengthBarColor(),
+                              }}
+                            >
+                              {strengthText()}
                             </div>
-                          )}
-                          {messageerr1 && (
-                            <div className="mt-4 flex justify-start space-x-[8px] items-center">
-                              <BiErrorAlt className="text-red-500 h-6" />
-                              <h2 className="text-red-500">
-                                Email already in use
-                              </h2>
-                            </div>
-                          )}
-                          {messageerr2 && (
-                            <div className="mt-4 flex justify-start space-x-[8px] items-center">
-                              <BiErrorAlt className="text-red-500 h-6" />
-                              <h2 className="text-red-500">Weak Password</h2>
-                            </div>
-                          )}
-                        </form>
+                            <div
+                              style={{
+                                height: '10px',
+                                width: `${strength * 20}%`,
+                                backgroundColor: strengthBarColor(),
+                                transition: 'width 0.3s ease-in-out',
+                              }}
+                            />
+                            {passwordError && (
+                              <div className="text-red-500 text-xs mt-1">{passwordError}</div>
+                            )}
 
-                        <div
-                          onClick={() => setsign(0)}
-                          className="font-poppins items-center  mb-16 text-sm flex justify-center"
-                        >
-                          <BsChevronLeft className="text-green-600 h-4 w-4" />
-                          <span className="text-green-600 cursor-pointer  ml-2">
-                            {" "}
-                            All sign up options
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        } else if (sign === 3) {
-          return (
-            <div className="text-center ">
-              <div
-                onClick={() => {
-                  setsignup(false);
-                  setsign(0);
-                }}
-                className={`${signup
-                  ? "fixed inset-0 bg-gray-100  backdrop-blur-md duration-500  bg-opacity-60 ease-in-out transition-all  overflow-y-hidden flex justify-center items-center "
-                  : "fixed inset-0 backdrop-blur-0 pointer-events-none duration-500  bg-opacity-0  ease-in-out transition-all overflow-y-hidden   "
-                  }`}
-              />
-              <div
-                className={`${signup
-                  ? "scale-100 z-[100] md:z-10  ease-in-out duration-500 min-h-full md:min-h-[600px] w-full md:w-auto md:h-auto md:m-auto   rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
-                  : "scale-0  ease-in-out duration-500 h-[600px] w-[500px]   rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
-                  }`}
-              >
-                {signup && (
-                  <div className="w-full md:px-[20rem] py-[10rem]">
-                    <div
-                      className="p-4 cursor-pointer absolute z-50 top-0 pt-10 pr-10 right-0"
-                      onClick={() => setsignup(false)}
-                    >
-                      <VscClose className="h-8 w-8 text-gray-400 hover:text-gray-700 duration-100 text-2xl cursor-pointer" />
-                    </div>
-                    <div className="px-10 mt-6   md:-translate-0 absolute w-full m-auto -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-                      <div className="">
-                        <div className="capitalize flex flex-col  font-poppins text-2xl  space-y-2 justify-center py-10">
-                          <h1>Sign in with email</h1>
-                          <h2 className="capitalize px-12 font-poppins text-sm  ">
-                            Enter the email address & password associated with
-                            your account, and we’ll send you right to home page.
-                          </h2>
-                        </div>
-                        <form
-                          onSubmit={login}
-                          className="flex flex-col w-[90%] sm:w-[60%]  mb-10 mt-2 m-auto "
-                        >
-                          <label
-                            className="text-gray-900 text-sm"
-                            htmlFor="email"
-                          >
-                            Your Email
-                          </label>
-                          <input
-                            id="email"
-                            name="email"
-                            onChange={(e) => {
-                              setloginemail(e.target.value);
-                            }}
-                            className="w-full md:w-[80%] m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black"
-                            type="text"
-                            required
-                            max={20}
-                          />
-                          <label
-                            className="text-gray-900 text-sm mt-4"
-                            htmlFor="password"
-                          >
-                            Your password
-                          </label>
-                          <input
-                            onChange={(e) => {
-                              setloginpassword(e.target.value);
-                            }}
-                            name="password"
-                            id="password"
-                            type="password"
-                            className="w-full my-2 md:w-[80%] m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black"
-                            required
-                            max={20}
-                          />
-                          <input
-                            className="px-8 mt-8 w-[70%] m-auto py-2 bg-gray-900 cursor-pointer hover:bg-black duration-100 rounded-full text-white"
-                            type="submit"
-                            value="Continue"
-                          />
-                          {messageerr && (
-                            <div className="mt-4 flex justify-start space-x-[8px] items-center">
-                              <BiErrorAlt className="text-red-500 h-6" />
-                              <h2 className="text-red-500">
-                                Invalid mail or password
-                              </h2>
-                            </div>
-                          )}
-                          {messageerr1 && (
-                            <div className="mt-4 flex justify-start space-x-[8px] items-center">
-                              <BiErrorAlt className="text-red-500 h-6" />
-                              <h2 className="text-red-500">
-                                Email already in use
-                              </h2>
-                            </div>
-                          )}
-                          {messageerr2 && (
-                            <div className="mt-4 flex justify-start space-x-[8px] items-center">
-                              <BiErrorAlt className="text-red-500 h-6" />
-                              <h2 className="text-red-500">Weak Password</h2>
-                            </div>
-                          )}
-                        </form>
+                            <label
+                              className="text-gray-900 text-sm mt-4"
+                              htmlFor="confirmPassword"
+                            >
+                              Konfirmasi Password
+                            </label>
+                            <input
+                              className={
+                                confirmPasswordError
+                                  ? "w-full my-2 md:w-[80%] input-error m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black"
+                                  : "w-full my-2 md:w-[80%] m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black"
+                              }
+                              name="confirmPassword"
+                              id="confirmPassword"
+                              type="password"
+                              required
+                              maxLength={20}
+                              onChange={(e) => validateConfirmPassword(e.target.value)}
+                            />
+                            {confirmPasswordError && (
+                              <div className="text-red-500 text-xs mt-1">{confirmPasswordError}</div>
+                            )}
+                            {loading ? <Spinner /> : <input
+                              className="px-8 mt-4 w-[70%] m-auto py-2 bg-gray-900 cursor-pointer hover:bg-black duration-100 rounded-full text-white"
+                              type="submit"
+                              value="Daftar"
+                            />}
+                          </form>
 
-                        <div
-                          onClick={() => setsign(0)}
-                          className="font-poppins items-center  mb-16 text-sm flex justify-center"
-                        >
-                          <BsChevronLeft className="text-green-600 h-4 w-4" />
-                          <span className="text-green-600 cursor-pointer  ml-2">
-                            {" "}
-                            All sign up options
-                          </span>
+                          <div
+                            onClick={() => setsign(3)}
+                            className="font-poppins items-center mb-16 text-sm flex justify-center"
+                          >
+                            <BsChevronLeft className="text-green-600 h-4 w-4" />
+                            <span className="text-green-600 cursor-pointer ml-2">
+                              {" "}
+                              Masuk sekarang
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        }
-      })()}
-      {/* SIGN UP */}
-    </main>
+            ); // * Sign In form
+          } else if (sign === 3) {
+            return (
+              <div className="text-center ">
+                <div
+                  onClick={() => {
+                    setsignup(false);
+                    setsign(0);
+                  }}
+                  className={`${signup
+                    ? "fixed inset-0 bg-gray-100  backdrop-blur-md duration-500  bg-opacity-60 ease-in-out transition-all  overflow-y-hidden flex justify-center items-center "
+                    : "fixed inset-0 backdrop-blur-0 pointer-events-none duration-500  bg-opacity-0  ease-in-out transition-all overflow-y-hidden   "
+                    }`}
+                />
+                <div
+                  className={`${signup
+                    ? "scale-100 z-[100] md:z-10  ease-in-out duration-500 min-h-full md:min-h-[600px] w-full md:w-auto md:h-auto md:m-auto   rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
+                    : "scale-0  ease-in-out duration-500 h-[600px] w-[500px] rounded-lg fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 bg-white shadow-xl"
+                    }`}
+                >
+                  {signup && (
+                    <div className="w-full md:px-[20rem] py-[10rem]">
+                      <div
+                        className="p-4 cursor-pointer absolute z-50 top-0 pt-10 pr-10 right-0"
+                        onClick={() => setsignup(false)}
+                      >
+                        <VscClose className="h-8 w-8 text-gray-400 hover:text-gray-700 duration-100 text-2xl cursor-pointer" />
+                      </div>
+                      <div className="px-10 mt-6 md:-translate-0 absolute w-full m-auto -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
+                        <div className="">
+                          <div className="capitalize flex flex-col font-poppins text-2xl  space-y-2 justify-center py-10">
+                            <h1>Masuk ke akun Anda</h1>
+                            <h2 className="capitalize px-12 font-poppins text-sm  ">
+                              Masukkan alamat email atau username & kata sandi yang terkait dengan akun Anda, dan kami akan mengarahkan Anda langsung ke halaman beranda.
+                            </h2>
+                          </div>
+                          {error && (
+                            <Alert error={error} />
+                          )}
+                          <form
+                            onSubmit={submitLogin}
+                            className="flex flex-col w-[90%] sm:w-[60%]  mb-10 mt-2 m-auto "
+                          >
+                            <label
+                              className="text-gray-900 text-sm"
+                              htmlFor="usernameAndEmailLogin"
+                            >
+                              Username atau Email
+                            </label>
+                            <input
+                              id="usernameAndEmailLogin"
+                              name="usernameAndEmailLogin"
+                              onChange={(e) => setUsernameOrEmail(e.target.value)}
+                              className={
+                                usernameOrEmailError
+                                  ? ("w-full my-2 md:w-[80%] input-error m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black")
+                                  : ("w-full my-2 md:w-[80%] m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black")
+                              }
+                              type="text"
+                              required
+                              max={20}
+                            />
+                            <label
+                              className="text-gray-900 text-sm mt-4"
+                              htmlFor="passwordLogin"
+                            >
+                              Password
+                            </label>
+                            <input
+                              onChange={(e) => validateLoginPassword(e.target.value)}
+                              name="passwordLogin"
+                              id="passwordLogin"
+                              type="password"
+                              className={
+                                passwordError
+                                  ? ("w-full my-2 md:w-[80%] input-error m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black")
+                                  : ("w-full my-2 md:w-[80%] m-auto text-center focus:none outline-none border-b-[0.2px] py-[4px] border-gray-900/50 hover:border-gray-700 duration-100 focus:border-black")
+                              }
+                              required
+                              max={20}
+                            />
+                            <div class="ml-3 text-sm space-x-2">
+                              <input
+                                id="remember"
+                                aria-describedby="remember"
+                                type="checkbox"
+                                className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-primary-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-primary-600 dark:ring-offset-gray-800" required=""
+                                onChange={(e) => setRememberMe(e.target.checked)}
+
+                              />
+
+                              <label for="remember" className="text-sm font-medium text-primary-400 hover:underline dark:text-primary-400">Ingat Saya</label>
+                            </div>
+
+                            {loading ? <Spinner /> : <input
+                              className="px-8 mt-4 w-[70%] m-auto py-2 bg-gray-900 cursor-pointer hover:bg-black duration-100 rounded-full text-white"
+                              type="submit"
+                              value="Masuk"
+                            />}
+                          </form>
+
+                          <div
+                            onClick={() => setsign(2)}
+                            className="font-poppins items-center  mb-16 text-sm flex justify-center"
+                          >
+                            <BsChevronLeft className="text-green-600 h-4 w-4" />
+                            <span className="text-green-600 cursor-pointer  ml-2">
+                              {" "}
+                              Daftar Sekarang
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+        })()}
+        {/* SIGN UP */}
+      </main>
+    </Layout>
   );
 }
 
@@ -1544,23 +1679,6 @@ function Comment() {
       aria-label="responses"
     >
       <path d="M18 16.8a7.14 7.14 0 0 0 2.24-5.32c0-4.12-3.53-7.48-8.05-7.48C7.67 4 4 7.36 4 11.48c0 4.13 3.67 7.48 8.2 7.48a8.9 8.9 0 0 0 2.38-.32c.23.2.48.39.75.56 1.06.69 2.2 1.04 3.4 1.04.22 0 .4-.11.48-.29a.5.5 0 0 0-.04-.52 6.4 6.4 0 0 1-1.16-2.65v.02zm-3.12 1.06l-.06-.22-.32.1a8 8 0 0 1-2.3.33c-4.03 0-7.3-2.96-7.3-6.59S8.17 4.9 12.2 4.9c4 0 7.1 2.96 7.1 6.6 0 1.8-.6 3.47-2.02 4.72l-.2.16v.26l.02.3a6.74 6.74 0 0 0 .88 2.4 5.27 5.27 0 0 1-2.17-.86c-.28-.17-.72-.38-.94-.59l.01-.02z"></path>
-    </svg>
-  );
-}
-function Like() {
-  return (
-    <svg
-      fill="gray"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      aria-label="clap"
-    >
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M11.37.83L12 3.28l.63-2.45h-1.26zM13.92 3.95l1.52-2.1-1.18-.4-.34 2.5zM8.59 1.84l1.52 2.11-.34-2.5-1.18.4zM18.52 18.92a4.23 4.23 0 0 1-2.62 1.33l.41-.37c2.39-2.4 2.86-4.95 1.4-7.63l-.91-1.6-.8-1.67c-.25-.56-.19-.98.21-1.29a.7.7 0 0 1 .55-.13c.28.05.54.23.72.5l2.37 4.16c.97 1.62 1.14 4.23-1.33 6.7zm-11-.44l-4.15-4.15a.83.83 0 0 1 1.17-1.17l2.16 2.16a.37.37 0 0 0 .51-.52l-2.15-2.16L3.6 11.2a.83.83 0 0 1 1.17-1.17l3.43 3.44a.36.36 0 0 0 .52 0 .36.36 0 0 0 0-.52L5.29 9.51l-.97-.97a.83.83 0 0 1 0-1.16.84.84 0 0 1 1.17 0l.97.97 3.44 3.43a.36.36 0 0 0 .51 0 .37.37 0 0 0 0-.52L6.98 7.83a.82.82 0 0 1-.18-.9.82.82 0 0 1 .76-.51c.22 0 .43.09.58.24l5.8 5.79a.37.37 0 0 0 .58-.42L13.4 9.67c-.26-.56-.2-.98.2-1.29a.7.7 0 0 1 .55-.13c.28.05.55.23.73.5l2.2 3.86c1.3 2.38.87 4.59-1.29 6.75a4.65 4.65 0 0 1-4.19 1.37 7.73 7.73 0 0 1-4.07-2.25zm3.23-12.5l2.12 2.11c-.41.5-.47 1.17-.13 1.9l.22.46-3.52-3.53a.81.81 0 0 1-.1-.36c0-.23.09-.43.24-.59a.85.85 0 0 1 1.17 0zm7.36 1.7a1.86 1.86 0 0 0-1.23-.84 1.44 1.44 0 0 0-1.12.27c-.3.24-.5.55-.58.89-.25-.25-.57-.4-.91-.47-.28-.04-.56 0-.82.1l-2.18-2.18a1.56 1.56 0 0 0-2.2 0c-.2.2-.33.44-.4.7a1.56 1.56 0 0 0-2.63.75 1.6 1.6 0 0 0-2.23-.04 1.56 1.56 0 0 0 0 2.2c-.24.1-.5.24-.72.45a1.56 1.56 0 0 0 0 2.2l.52.52a1.56 1.56 0 0 0-.75 2.61L7 19a8.46 8.46 0 0 0 4.48 2.45 5.18 5.18 0 0 0 3.36-.5 4.89 4.89 0 0 0 4.2-1.51c2.75-2.77 2.54-5.74 1.43-7.59L18.1 7.68z"
-      ></path>
     </svg>
   );
 }
