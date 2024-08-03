@@ -63,6 +63,8 @@ const Post = ({ user }) => {
   // * Fetch Post and Likes
   const router = useRouter();
   const [posts, setPosts] = useState([]);
+  const [postsLikes, setPostsLikes] = useState([]);
+
   const [postsNew, setPostsNew] = useState([]);
 
   const [id, setId] = useState('');
@@ -118,6 +120,9 @@ const Post = ({ user }) => {
 
       const { data: post } = await axios.get(`articles/published`);
       setPosts(post);
+
+      const { data: postLikes } = await axios.get(`articles/mostlikes`);
+      setPostsLikes(postLikes);
 
       const { data: postNew } = await axios.get(`articles/published/new`);
       setPostsNew(postNew);
@@ -940,7 +945,7 @@ const Post = ({ user }) => {
                     Paling Disukai di Penaly
                   </h2>
                   <div className="py-6">
-                    {posts.slice(0, 5)?.map((post) => (
+                    {postsLikes.slice(0, 5)?.map((post) => (
                       <Link
                         passHref
                         key={post.id}

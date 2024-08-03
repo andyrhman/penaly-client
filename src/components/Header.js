@@ -228,6 +228,7 @@ export function Header({ user }) {
           <div className="hidden md:inline-flex items-center space-x-5">
             <h3 className="cursor-pointer">About</h3>
             <h3 className="cursor-pointer">Contact</h3>
+            <Link href={'/categories'} className="cursor-pointer">Kategori</Link>
           </div>
         </div>
         <div className="flex items-center space-x-5 text-green-600 ">
@@ -246,7 +247,12 @@ export function Header({ user }) {
                 className="w-10 h-10 cursor-pointer  rounded-full"
               >
                 {user.foto ? (
-                  <img src={user.foto} className="rounded-full" alt="" />
+                  <Image src={user.foto} class="w-9 h-9 rounded-full"
+                    width={9}
+                    height={9}
+                    unoptimized={true}
+                    alt={user.namaLengkap}
+                  />
                 ) : (
                   <div className="bg-green-600  cursor-pointer flex justify-center items-center rounded-full h-10 w-10">
                     <span className="text-white cursor-pointer uppercase">
