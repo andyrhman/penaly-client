@@ -35,7 +35,6 @@
     "sanitize-html": "^2.13.0"
   },
   "devDependencies": {
-    "@sanity/block-content-to-react": "^3.0.0",
     "@tailwindcss/line-clamp": "^0.4.4",
     "@tailwindcss/typography": "^0.5.13",
     "@types/node": "20.14.12",

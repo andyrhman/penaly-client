@@ -17,6 +17,8 @@ import SyntaxHighlighter from "react-syntax-highlighter";
 import Link from "next/link";
 import FormatDate from "../../services/format-time"
 import parse from 'html-react-parser';
+import Alert from '../../components/Alert'
+import Spinner from '../../components/Spinner'
 import Layout from "../../components/Layout";
 import SEO from "../../components/SEO";
 import * as sanitizeHtml from 'sanitize-html';
@@ -955,10 +957,11 @@ const Post = ({ user }) => {
                           <div className="space-y-2 flex flex-col jusify-center cursor-pointer">
                             <div className="flex items-center space-x-2">
                               {" "}
-                              <img
-                                alt="r"
-                                className="h-6 rounded-full"
-                                src={post.user.foto}
+                              <Image src={user.foto} class="w-9 h-9 rounded-full"
+                                width={9}
+                                height={9}
+                                unoptimized={true}
+                                alt={user.namaLengkap}
                               />
                               <span className="text-sm font-normal capitalize">
                                 {post.user.username}
@@ -1045,9 +1048,9 @@ const Post = ({ user }) => {
                               Masuk
                             </span>
                           </div>
-                          <div className="font-poppins  mb-20   text-center text-gray-600 text-xs flex justify-center items-center">
+                          <div className="font-poppins mb-20 text-center text-gray-600 text-xs flex justify-center items-center">
                             <h2>
-                              Klik "Daftar" untuk menyetujui Persyaratan Layanan Penaly dan mengakui bahwa Kebijakan Privasi Penaly berlaku untuk Anda.
+                              Klik &quot;Daftar&quot; untuk menyetujui Persyaratan Layanan Penaly dan mengakui bahwa Kebijakan Privasi Penaly berlaku untuk Anda.
                             </h2>
                           </div>
                         </div>
@@ -1112,7 +1115,7 @@ const Post = ({ user }) => {
                           </div>
                           <div className="font-poppins  mb-20   text-center text-gray-600 text-xs flex justify-center items-center">
                             <h2>
-                              Klik "Masuk" untuk menyetujui Persyaratan Layanan Penaly dan mengakui bahwa Kebijakan Privasi Penaly berlaku untuk Anda.
+                              Klik &quot;Masuk&quot; untuk menyetujui Persyaratan Layanan Penaly dan mengakui bahwa Kebijakan Privasi Penaly berlaku untuk Anda.
                             </h2>
                           </div>
                         </div>

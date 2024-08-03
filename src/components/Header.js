@@ -422,7 +422,7 @@ export function Header({ user }) {
                         </div>
                         <div className="font-poppins  mb-20   text-center text-gray-600 text-xs flex justify-center items-center">
                           <h2>
-                            Klik "Daftar" untuk menyetujui Persyaratan Layanan Penaly dan mengakui bahwa Kebijakan Privasi Penaly berlaku untuk Anda.
+                            Klik &quot;Daftar&quot; untuk menyetujui Persyaratan Layanan Penaly dan mengakui bahwa Kebijakan Privasi Penaly berlaku untuk Anda.
                           </h2>
                         </div>
                       </div>
@@ -487,7 +487,7 @@ export function Header({ user }) {
                         </div>
                         <div className="font-poppins  mb-20   text-center text-gray-600 text-xs flex justify-center items-center">
                           <h2>
-                            Klik "Masuk" untuk menyetujui Persyaratan Layanan Penaly dan mengakui bahwa Kebijakan Privasi Penaly berlaku untuk Anda.
+                            Klik &quot;Masuk&quot; untuk menyetujui Persyaratan Layanan Penaly dan mengakui bahwa Kebijakan Privasi Penaly berlaku untuk Anda.
                           </h2>
                         </div>
                       </div>

@@ -6,10 +6,10 @@ const Footer = () => {
         <footer className="bg-white mb-auto rounded-lg shadow">
             <div className="w-full max-w-screen-xl mx-auto p-4 md:py-8">
                 <div className="sm:flex sm:items-center sm:justify-between">
-                    <a href={process.env.NEXT_PUBLIC_PENALY_CLIENT} className="flex items-center mb-4 sm:mb-0 space-x-3 rtl:space-x-reverse">
+                    <Link href='/' className="flex items-center mb-4 sm:mb-0 space-x-3 rtl:space-x-reverse">
                         <img src="/images/fountain-pen.png" className="h-8" alt="Penaly" />
                         <span className="self-center text-2xl font-semibold whitespace-nowrap">Penaly</span>
-                    </a>
+                    </Link>
                     <ul className="flex flex-wrap items-center mb-6 text-sm font-medium text-gray-500 sm:mb-0">
                         <li>
                             <a href="https://x.com/andyrhmann" className="text-center hover:underline me-4 md:me-6">
