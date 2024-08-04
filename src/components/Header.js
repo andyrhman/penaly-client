@@ -38,7 +38,6 @@ export function Header({ user }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    setEmailError(false);
     setLoading(true);
     setPasswordError('');
     setConfirmPasswordError('');

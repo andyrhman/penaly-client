@@ -215,7 +215,6 @@ const Post = ({ user }) => {
 
   const submit = async (e) => {
     e.preventDefault();
-    setEmailError(false);
     setLoading(true);
     setPasswordError('');
     setConfirmPasswordError('');
@@ -957,11 +956,11 @@ const Post = ({ user }) => {
                           <div className="space-y-2 flex flex-col jusify-center cursor-pointer">
                             <div className="flex items-center space-x-2">
                               {" "}
-                              <Image src={user.foto} class="w-9 h-9 rounded-full"
+                              <Image src={post.user.foto} class="w-9 h-9 rounded-full"
                                 width={9}
                                 height={9}
                                 unoptimized={true}
-                                alt={user.namaLengkap}
+                                alt={post.user.namaLengkap}
                               />
                               <span className="text-sm font-normal capitalize">
                                 {post.user.username}

@@ -24,7 +24,7 @@ const categoryColors = {
 };
 
 export default function Home() {
-  const pageTitle = `Kategori | ${process.env.siteTitle}`;
+  const pageTitle = `Artikel | ${process.env.siteTitle}`;
   const { ref: myRef, inView: myelemisvisible } = useInView();
   const router = useRouter();
   const [loading, setLoading] = useState(false);

@@ -21,6 +21,7 @@ const SEO = ({ title }) => {
             <meta property="og:site_name" content={siteURL} key="ogsitename" />
             <meta property="og:title" content={title} key="ogtitle" />
             <meta property="og:description" content={description} key="ogdesc" />
+            <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
 
             <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png" />
             <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png" />
